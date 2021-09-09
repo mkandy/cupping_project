@@ -29,7 +29,6 @@ unsigned char unicode_number[4] = {0};
 unsigned char consumer_number[] = "";
 unsigned char button_number[] = "";
 
-
 //驱动宏定义：
 //hx711通道；
 enum
@@ -91,7 +90,7 @@ typedef struct
 struct
 {
     unsigned long pressure;
-    unsigned long ntc;
+    unsigned char ntc;
 } HTI_sensor;
 //气泵档位Init
 typedef struct
@@ -394,6 +393,14 @@ void KeyTimer(void) __interrupt TIMER0_VECTOR
             if ((set_timer->timer_timer % set_timer->timer_pwm_duty) == 0)
                 TimerHandler(); //自动定时关机
         }
+    }
+    else
+    {
+        copping_button.stat = 0;
+        PWM_ON = 0;
+        TR0 = 0; //停止计数
+        ET0 = 0; //停止计数中断
+        button->button_press_flag = 0; /* code */
     }
 }
 
