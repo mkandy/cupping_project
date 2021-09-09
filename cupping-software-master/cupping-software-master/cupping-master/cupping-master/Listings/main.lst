@@ -1,0 +1,33 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              08/11/2021 21:39:34 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: d:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\include) DEBUG OBJECTEXTEND PRI
+                    -NT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <stc12.h>
+*** ERROR C129 IN LINE 28 OF .\include\8051.h: missing ';' before '__at'
+*** WARNING C320 IN LINE 199 OF .\include\compiler.h: unrecognized compiler
+   2          #define MAIN_Fosc 12000000L
+   3          #define LED P1_1
+   4          void delay_ms(unsigned int ms){
+   5              unsigned int i;
+   6              do{
+   7                  i = MAIN_Fosc / 13000;
+   8                  while (--i);
+   9              } while (--ms);
+  10          }
+  11          
+  12          void main(){
+  13              while (1){
+  14                  LED = 0;
+  15                  delay_ms(100);
+  16                  LED = 1;
+  17                  delay_ms(100);
+  18              }
+  19          }
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  1 ERROR(S)

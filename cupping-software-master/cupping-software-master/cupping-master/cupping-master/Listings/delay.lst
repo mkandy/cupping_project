@@ -1,0 +1,36 @@
+C51 COMPILER V9.60.0.0   DELAY                                                             08/11/2021 21:39:34 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN .\Objects\delay.obj
+COMPILER INVOKED BY: d:\Keil_v5\C51\BIN\C51.EXE src\delay.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\include) DEBUG OBJECTEXTEN
+                    -D PRINT(.\Listings\delay.lst) TABS(2) OBJECT(.\Objects\delay.obj)
+
+line level    source
+
+   1          
+   2          #include <delay.h>
+*** ERROR C129 IN LINE 28 OF .\include\8051.h: missing ';' before '__at'
+*** WARNING C320 IN LINE 199 OF .\include\compiler.h: unrecognized compiler
+   3          void delay_ms(unsigned int ms)
+   4          {
+   5              unsigned int i;
+   6              do
+   7              {
+   8                  i = MAIN_Fosc / 1300000;
+   9                  while (--i)
+  10                      ;
+  11              } while (--ms);
+  12          }
+  13          void delay_us(unsigned int us)
+  14          {
+  15              unsigned int i;
+  16              do
+  17              {
+  18                  i = MAIN_Fosc / 1300;
+  19                  while (--i)
+  20                      ;
+  21              } while (--us);
+  22          }
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  1 ERROR(S)

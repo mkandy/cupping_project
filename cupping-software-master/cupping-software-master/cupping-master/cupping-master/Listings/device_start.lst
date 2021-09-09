@@ -1,0 +1,500 @@
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE DEVICE_START
+OBJECT MODULE PLACED IN .\Objects\device_start.obj
+COMPILER INVOKED BY: d:\Keil_v5\C51\BIN\C51.EXE src\device_start.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\include) DEBUG OBJE
+                    -CTEXTEND PRINT(.\Listings\device_start.lst) TABS(2) OBJECT(.\Objects\device_start.obj)
+
+line level    source
+
+   1          
+   2          #include <start.h>
+*** ERROR C129 IN LINE 28 OF .\include\8051.h: missing ';' before '__at'
+*** WARNING C320 IN LINE 199 OF .\include\compiler.h: unrecognized compiler
+   3          unsigned char PWM_ON; //定义按键时间
+   4          volatile char PWM_Time,PWM_FLAG, PTC_FLAG, MOTOR_FLAG;
+   5          
+   6          volatile u16 PWM_low,PWM_high,PWM;
+   7          
+   8          
+   9          #define Timer0_Reload (MAIN_Fosc / 100)//Timer 0 中断频率, 100次/秒
+  10          #define T2KHZ       (65536- MAIN_Fosc/12/6000)     //Timer2
+  11          
+  12          
+  13          #define Power_switch P1_5
+  14          #define Pump_motor P5_4
+  15          #define  PTC P5_5
+  16          #define  Vibration_motor P3_0
+  17          #define  Valve P3_1
+  18          
+  19          
+  20          
+  21          
+  22          #define     PWM_DUTY        6000            //??PWM???,????????,????24.576MHZ???,?PWM???6000HZ?
+  23          #define   PWM_DUTY1   4000
+  24          #define     PWM_DUTY2   5000
+  25          #define     PWM_HIGH_MIN    32              //??PWM????????????????
+  26          #define     PWM_HIGH_MAX    (PWM_DUTY-PWM_HIGH_MIN) //??PWM????????????????
+  27          
+  28          
+  29          //hx711通道；
+  30          union 
+  31          {
+  32            unsigned char A128 ;
+  33            unsigned char B32 ;
+  34              unsigned char A64 ;/*channel data */
+  35          }channel;
+  36           //自定义枚举4个按键按下时的值；发热键，电源键，气泵键，振动键
+  37          enum Key
+  38              {
+  39                  Power_button,//0x00
+  40                  Pump_button,//0x01
+  41                  Vibration_button,//0x02
+  42                  PTC_button//0x03
+  43               
+  44              }Key_pressed;
+  45          //自定义一个int结构体位域来解析按键：单次，双击，长按，等功能
+  46          typedef struct button
+  47          {
+  48          unsigned int stat:1;
+  49          unsigned int times:2;
+  50          unsigned int which_press:8;
+  51          unsigned int long_press:4;
+  52          unsigned int long_press_state:1;
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 2   
+
+  53          }HTI_button;
+  54          //初始化按键
+  55          HTI_button copping_button;
+  56          
+  57          
+  58          
+  59          void DeviceInit(void)
+  60          {
+  61          //变量初始化
+  62              Pump_motor=0;
+  63              Vibration_motor=1;
+  64              PTC=0;
+  65              Valve=1;
+  66              Power_switch=0;
+  67              copping_button.stat=0;
+  68          PWM_ON=0;//按键延时
+  69          TR0 = 0;  //停止计数
+  70          ET0 = 0;  //停止计数中断
+  71          //hx711通道初始化
+  72          channel.A128=24;//A通道128
+  73          channel.B32=25;//B通道32
+  74          channel.A64=26;//A通道64
+  75          
+  76          
+  77          
+  78          }
+  79          
+  80          void Start(void)
+  81          {
+  82          
+  83            P0M1 = 0; P0M0 = 0; //设置为准双向口
+  84            P1M1 = 0; P1M0 = 0x20;  //设置为准双向口
+  85            P2M1 = 0; P2M0 = 0; //设置为准双向口
+  86              P3M1 = 0; P3M0 = 0x03;  //设置为准双向口
+  87            P4M1 = 0; P4M0 = 0; //设置为准双向口
+  88            P5M1 = 0; P5M0 = 0x30;  //设置为准双向口
+  89          
+  90          
+  91          
+  92            DeviceInit(); 
+  93          
+  94          Int0_init();
+  95          Int1_init();
+  96          Int2_init();
+  97          Int3_init();
+  98          
+  99          
+ 100          
+ 101          
+ 102          display(0x00,GIRD2);
+ 103          HX711_Read(channel.B32);
+ 104          MOTOR_FLAG=0;
+ 105          PTC_FLAG=0;
+ 106          
+ 107          
+ 108          #if(Seril_Debug==1) 
+              Send1_String("STC15W204S\r\nUart is ok !\r\n");//发送字符串检测是否初始化成功
+              Send1_String("gn1616_start\r\ndelay_ms(1000)!\r\n");//发送字符串检测是否初始化成功
+              #endif
+ 112          
+ 113          EA=0;
+ 114          
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 3   
+
+ 115          EA=1;
+ 116              while (1) {
+ 117                  
+ 118          
+ 119                 if ((PWM_FLAG==1)&&(PTC_FLAG==1)) PTC=1;else PTC=0;
+ 120                 //if ((MOTOR_FLAG==1)) Vibration_motor=1;else Vibration_motor=0;
+ 121          
+ 122          
+ 123                 if(copping_button.stat)//按键中断flag;
+ 124                 {
+ 125                  EA=0;
+ 126                  #if(Seril_Debug==1) 
+                      Send1_String("copping_=1\r\n");//有按键操作发送字符
+                      Send1_String("Button\r\n");//发送按键值
+                      send1_Byte(copping_button.which_press);
+                      #endif
+ 131                     copping_button.stat=0;
+ 132                     copping_button.which_press=Key_pressed;
+ 133                        
+ 134                
+ 135          
+ 136          
+ 137                     switch(copping_button.which_press)
+ 138                     {
+ 139                  
+ 140                      case PTC_button:
+ 141                        // PTC_LED=!PTC_LED;
+ 142                          PWM=2000;
+ 143                          LoadPWM(PWM);
+ 144                          Timer2_init();
+ 145                         PTC_FLAG=!PTC_FLAG;//启动PTC加热
+ 146                         if(PTC_FLAG) display(0xf0,GIRD2);
+ 147                          else display(0x00,GIRD2);
+ 148                         break;
+ 149                      case Vibration_button:
+ 150                        // Vibration_LED=!Vibration_LED;
+ 151          
+ 152                       
+ 153                         Vibration_motor=!Vibration_motor;
+ 154                         if(!Vibration_motor)
+ 155                         display(0x0f,GIRD1);
+ 156                         else display(0x00,GIRD1);  /* code */
+ 157                         break;
+ 158                      case Pump_button:
+ 159                        // Pump_LED=!Pump_LED;
+ 160                        
+ 161                         Pump_motor=!Pump_motor;//启动气泵开关
+ 162                         if(Pump_motor) display(0xf0,GIRD1);
+ 163                         else display(0x00,GIRD1);
+ 164                         break;
+ 165                      case Power_button:
+ 166                         //Power_LED=!Power_LED;
+ 167                         display(0x0f,GIRD2);
+ 168                         Valve=!Valve;
+ 169                         if(!Valve)display(0x0f,GIRD2);
+ 170                         else display(0x00,GIRD2);
+ 171                         break;
+ 172                          // -------------------------------
+ 173                         // Default event handler.
+ 174                        default:
+ 175                        break;
+ 176                     }
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 4   
+
+ 177                     /*
+ 178                     switch(copping_button.times)
+ 179                     {
+ 180                         case 1:
+ 181                         
+ 182                         break;
+ 183                         case 2:
+ 184                         
+ 185                         break;
+ 186                         case 3:
+ 187                         
+ 188                         break;
+ 189          
+ 190                          // -------------------------------
+ 191                         // Default event handler.
+ 192                        default:
+ 193                        break;
+ 194                     }
+ 195                     */
+ 196          
+ 197                 }
+ 198            if(copping_button.long_press_state)//如果检测到长时间按键则打开电源及升压
+ 199            {
+ 200            EA=0;
+ 201          Pump_motor=0;
+ 202          
+ 203          Pump_motor=0;
+ 204          Vibration_motor=1;
+ 205          PTC=0;
+ 206          Valve=1;
+ 207          
+ 208          
+ 209          MOTOR_FLAG=0;
+ 210          PTC_FLAG=0;
+ 211          
+ 212          copping_button.long_press_state=0;//reset press long time flag;
+ 213          Power_switch=!Power_switch;//trun on the power switch;
+ 214          if(Power_switch)
+ 215          {
+ 216              display(0xff,GIRD1);
+ 217              display(0xff,GIRD2);
+ 218              delay_ms(3000);
+ 219              display(0x00,GIRD1);
+ 220              display(0x00, GIRD2);
+ 221          
+ 222              }
+ 223          else 
+ 224          {
+ 225          display(0x00,GIRD1);
+ 226          display(0x00,GIRD2);
+ 227          EA=1;
+ 228          EX1=0;
+ 229          WAKE_CLKO &= 0xef;
+ 230          WAKE_CLKO &= 0xdf;
+ 231          PCON|=0x02;  //sleep mode
+ 232          
+ 233          WAKE_CLKO |= 0x20;
+ 234          WAKE_CLKO |= 0x10;
+ 235          EX1=1;    
+ 236          
+ 237          }
+ 238          #if(Seril_Debug==1) 
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 5   
+
+              Send1_String("long_press_state=1\r\n");//发送字符串检测是否初始化成功
+              #endif
+ 241          
+ 242            }
+ 243            EA=1;
+ 244              }//
+ 245              
+ 246          
+ 247              
+ 248          }
+ 249          
+ 250          void KeyTimer(void) __interrupt TIMER0_VECTOR
+ 251          {
+ 252          
+ 253          if((!INT0)||(!INT1)||(!INT2)||(!INT3))
+ 254          PWM_ON++;
+ 255          else
+ 256          {
+ 257          copping_button.stat=0;
+ 258          PWM_ON=0;
+ 259          TR0 = 0;  //停止计数
+ 260          ET0 = 0;  //停止计数中断
+ 261          copping_button.long_press=0;
+ 262          }
+ 263             
+ 264          if(PWM_ON%20==0)
+ 265          {
+ 266          if((!INT0)||(!INT1)||(!INT2)||(!INT3))
+ 267          copping_button.long_press++;
+ 268          else
+ 269          {
+ 270          copping_button.times++;
+ 271              copping_button.stat=1;
+ 272             // PTC_LED=!PTC_LED;
+ 273              copping_button.long_press=0;
+ 274              copping_button.long_press_state=0;
+ 275              PWM_ON=0;    
+ 276              TR0 = 0;  //停止计数
+ 277              ET0 = 0;  //停止计数中断
+ 278               }
+ 279          if(copping_button.long_press>3) 
+ 280          {
+ 281              copping_button.times++;
+ 282              copping_button.stat=0;
+ 283                 //  Pump_LED=!Pump_LED;
+ 284               copping_button.long_press=0;
+ 285               copping_button.long_press_state=1;
+ 286              PWM_ON=0;    
+ 287              TR0 = 0;  //停止计数
+ 288              ET0 = 0;  //停止计数中断
+ 289          }
+ 290          
+ 291               }
+ 292             
+ 293            //if(copping_button.long_press>30)
+ 294                     // PTC_LED=!PTC_LED;
+ 295                    //  LED1 = 0;
+ 296                     // LED2 = 1; //灯灭
+ 297          
+ 298          }
+ 299          
+ 300          
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 6   
+
+ 301          
+ 302          void PWMTimer(void)__interrupt TIMER2_VECTOR
+ 303          {
+ 304            PWM_FLAG =!PWM_FLAG;
+ 305             
+ 306          
+ 307              if (PWM_FLAG == 1)
+ 308             {
+ 309          
+ 310                  T2H = (PWM_low >> 8); //LED on time is 10%
+ 311                  T2L = PWM_low;
+ 312              }
+ 313              else
+ 314              {
+ 315          
+ 316                  T2H = (PWM_high >> 8); //LED off time is 90%
+ 317                  T2L = PWM_high;
+ 318              }
+ 319          }
+ 320          
+ 321          
+ 322          void    LoadPWM(u16 i)
+ 323          {
+ 324              u16 j;
+ 325              AUXR &= ~(1<<4);    //stop counter
+ 326              if(i > PWM_HIGH_MAX)        i = PWM_HIGH_MAX;   //max range for PWM
+ 327              if(i < PWM_HIGH_MIN)        i = PWM_HIGH_MIN;   //min range for PWM
+ 328              j = 65536UL - PWM_DUTY + i; //low value for PWM
+ 329              i = 65536UL - i;            //high value for PWM
+ 330          //    EA = 0;
+ 331              PWM_high = i;   //
+ 332              PWM_low  = j;   //
+ 333              PWM_Time=0;
+ 334            //  EA=1;
+ 335          }
+ 336          
+ 337          
+ 338          
+ 339          
+ 340          /********************* INT0中断函数 *************************/
+ 341          void INT0_int(void)__interrupt INT0_VECTOR    //进中断时已经清除标志
+ 342          {
+ 343              Timer0_init();//启动定时器：作用于消抖按键，判断按键功能
+ 344              copping_button.stat=0;
+ 345              Key_pressed=Power_button;
+ 346             // LED1=!LED1;
+ 347            //EX0 = 0;  //INT0 Disable
+ 348            //IE0 = 0;  //外中断0标志位
+ 349          }
+ 350          
+ 351          /********************* INT1中断函数 *************************/
+ 352          void INT1_int(void)__interrupt INT1_VECTOR    //进中断时已经清除标志
+ 353          {
+ 354              Timer0_init();//启动定时器：作用于消抖按键，判断按键功能
+ 355             copping_button.stat=0;
+ 356              Key_pressed=Pump_button;
+ 357              //LED2=!LED2;
+ 358            //EX1 = 0;  //INT1 Disable
+ 359            //IE1 = 0;  //外中断1标志位
+ 360          }
+ 361          /********************* INT2中断函数 *************************/
+ 362          void INT2_int(void)__interrupt INT2_VECTOR    //进中断时已经清除标志
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 7   
+
+ 363          {
+ 364              Timer0_init();//启动定时器：作用于消抖按键，判断按键功能
+ 365             copping_button.stat=0;
+ 366              Key_pressed=Vibration_button;
+ 367             // LED2=!LED2;
+ 368            //EX1 = 0;  //INT1 Disable
+ 369            //IE1 = 0;  //外中断1标志位
+ 370          }
+ 371          
+ 372          
+ 373          
+ 374          
+ 375          /********************* INT2中断函数 *************************/
+ 376          void INT3_int(void)__interrupt INT3_VECTOR    //进中断时已经清除标志
+ 377          {
+ 378              Timer0_init();//启动定时器：作用于消抖按键，判断按键功能
+ 379              copping_button.stat=0;
+ 380              Key_pressed=PTC_button;
+ 381             // LED2=!LED2;
+ 382            //EX1 = 0;  //INT1 Disable
+ 383            //IE1 = 0;  //外中断1标志位
+ 384          }
+ 385          void Int0_init(void)
+ 386          {
+ 387          IE0  = 1; //外中断0标志位
+ 388          EX0 = 1;  //INT0 Enable
+ 389          IT0 = 1;    //INT0 下降沿中断    
+ 390          //  IT0 = 0;    //INT0 上升,下降沿中断   
+ 391          
+ 392          
+ 393          }
+ 394          void Int1_init(void)
+ 395          {
+ 396          IE1  = 1; //外中断1标志位
+ 397          EX1 = 1;  //INT1 Enable
+ 398          IT1 = 1;    //INT1 下降沿中断    
+ 399          //  IT1 = 0;    //INT1 上升,下降沿中断 
+ 400          }
+ 401          void Int2_init(void)
+ 402          {
+ 403          WAKE_CLKO |= 0x10;  //INT3 Enable   //INT2 Enable
+ 404              //INT2 只能下降沿中断    
+ 405          
+ 406          }
+ 407          void Int3_init(void)
+ 408          {
+ 409          WAKE_CLKO |= 0x20;  //INT3 Enable
+ 410              //INT3 只能下降沿中断    
+ 411          }
+ 412          
+ 413          //========================================================================
+ 414          // 函数: void Timer0_init(void)
+ 415          // 描述: timer0初始化函数.
+ 416          // 参数: none.
+ 417          // 返回: none.
+ 418          // 版本: V1.0, 2015-1-12
+ 419          //========================================================================
+ 420          void  Timer0_init(void)
+ 421          {
+ 422              TR0 = 0;  //停止计数
+ 423          
+ 424            #if (Timer0_Reload < 64)  // 如果用户设置值不合适， 则不启动定时器
+C51 COMPILER V9.60.0.0   DEVICE_START                                                      08/11/2021 21:39:34 PAGE 8   
+
+                  #error "Timer0设置的中断过快!"
+              
+                #elif ((Timer0_Reload/12) < 65536UL)  // 如果用户设置值不合适， 则不启动定时器
+ 428              ET0 = 1;  //允许中断
+ 429            //  PT0 = 1;  //高优先级中断
+ 430              TMOD &= ~0x03;
+ 431              TMOD |= 0;  //工作模式, 0: 16位自动重装, 1: 16位定时/计数, 2: 8位自动重装, 3: 16位自
+             -动重装, 不可屏蔽中断
+ 432            //  TMOD |=  0x04;  //对外计数或分频
+ 433              TMOD &= ~0x04;  //定时
+ 434            //  INT_CLKO |=  0x01;  //输出时钟
+ 435              WAKE_CLKO &= ~0x01; //不输出时钟
+ 436          
+ 437              #if (Timer0_Reload < 65536UL)
+                    AUXR |=  0x80;  //1T mode
+                    TH0 = (u8)((65536UL - Timer0_Reload) / 256);
+                    TL0 = (u8)((65536UL - Timer0_Reload) % 256);
+                  #else
+ 442                AUXR &= ~0x80;  //12T mode
+ 443                TH0 = (u8)((65536UL - Timer0_Reload/12) / 256);
+ 444                TL0 = (u8)((65536UL - Timer0_Reload/12) % 256);
+ 445              #endif
+ 446          
+ 447              TR0 = 1;  //开始运行
+ 448          
+ 449            #else
+                  #error "Timer0设置的中断过慢!"
+                #endif
+ 452          }
+ 453          
+ 454          void Timer2_init(void)
+ 455          {
+ 456            AUXR &= ~(1<<4);    //stop counter
+ 457              IE2  |=  (1<<2);    //enable timer2 interrupt
+ 458              AUXR |=  (1<<2);    //set 1T
+ 459              AUXR &= ~(1<<3);    //set timer mode
+ 460          //    INT_CLKO |=  0x04;  //output clock
+ 461          
+ 462              T2H = 0;
+ 463              T2L = 0;
+ 464              AUXR |=  (1<<4);    //start timer2
+ 465          
+ 466          }                                                   
+ 467                  
+ 468          
+ 469          
+ 470          
+ 471          
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  1 ERROR(S)

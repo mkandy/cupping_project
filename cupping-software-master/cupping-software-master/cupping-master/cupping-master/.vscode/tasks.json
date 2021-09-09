@@ -1,0 +1,32 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "LiteOSBaseTools",
+			"task": "Build",
+			"problemMatcher": [
+				"$liteosPM-Build-Make"
+			],
+			"group": "build",
+			"label": "LiteOSTool: Build"
+		},
+		{
+			"type": "LiteOSBaseTools",
+			"task": "Burner",
+			"problemMatcher": [],
+			"label": "LiteOSTool: Burner"
+		},
+		{
+			"type": "PlatformIO",
+			"task": "Upload (stc15w204)",
+			"problemMatcher": [
+				"$platformio"
+			],
+			"label": "PlatformIO: Upload (stc15w204)",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}
