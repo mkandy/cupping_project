@@ -144,9 +144,8 @@ void DeviceInit(void)
     PTC = 0;                 //加热输出初始化
     Valve = 1;               //电磁阀输出初始化
     Power_switch = 0;        //电源开关输出初始化
-    copping_button.stat = 0; //按键标志位初始化
     PWM_ON = 0;              //按键延时
-    timer_on = 0;
+    timer_on = 0;            //定时延时
     TR0 = 0;                  //停止计数
     ET0 = 0;                  //停止计数中断
     button = &copping_button; //按键指针;
@@ -449,14 +448,14 @@ void INT3_int(void) __interrupt INT3_VECTOR //进中断时已经清除标志
 }
 void Int0_init(void)
 {
-    IE0 = 1; //外中断0标志位
+    IE0 = 0; //外中断0标志位
     EX0 = 1; //INT0 Enable
     IT0 = 1; //INT0 下降沿中断
     //	IT0 = 0;		//INT0 上升,下降沿中断
 }
 void Int1_init(void)
 {
-    IE1 = 1; //外中断1标志位
+    IE1 = 0; //外中断1标志位
     EX1 = 1; //INT1 Enable
     IT1 = 1; //INT1 下降沿中断
     //	IT1 = 0;		//INT1 上升,下降沿中断
@@ -713,6 +712,7 @@ void HeatPTCPWM(unsigned char pwm)
     if (how_set_ptc.ptc_timer > 100) //pwm占空比设定为100%
         how_set_ptc.ptc_timer = 0;
 }
+//定时控制
 void TimerHandler(void)
 {
     if (how_set_timer.timer_keyleve > 0)
