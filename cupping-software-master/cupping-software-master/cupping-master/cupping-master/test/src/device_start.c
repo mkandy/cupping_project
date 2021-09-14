@@ -160,7 +160,7 @@ void DeviceInit(void)
     memset(&how_set_vibration, 0, sizeof(how_set_vibration)); //清零vibration所有pwm输出
     memset(&how_set_ptc, 0, sizeof(how_set_ptc));             //清零ptc所有pwm输出
     memset(&control_display, 0, sizeof(control_display));     //将LED所有显示输出灯灭
-    memset(&how_set_timer, 0, sizeof(how_set_timer));         //将定时结体构初始化
+    memset(&how_set_timer, 0, sizeof(how_set_timer));         //将定时结构体初始化
 }
 //scheduler and handler进度和处理
 void Start(void)
@@ -198,21 +198,16 @@ void Start(void)
     {
 
         HTI_sensor.pressure = HX711_Read((Pressure_A128)); //获取气压sensor输入通道增益128的电压值
-        //  HTI_sensor.pressure = 0x12345678;
-
+        //取值并转换为16进制数据，再由串口打印
         unicode_number[3] = HTI_sensor.pressure;
-
         unicode_number[2] = HTI_sensor.pressure >> 8;
-
         unicode_number[1] = HTI_sensor.pressure >> 16;
-        // send1_Byte(unicode_number[2]);
         unicode_number[0] = HTI_sensor.pressure >> 24;
-        //  send1_Byte(unicode_number[3]);
+
 #if (Seril_Debug == 1)
         HexToAscii(unicode_number, consumer_number, 4);
         Send1_String("\r\nL+Hpressure="); //发送气压传感器 低 8位
         Send1_String(consumer_number);
-        // send1_Byte(consumer_number[0]);
         gn1616_ms(500);
 #endif
 
@@ -228,7 +223,6 @@ void Start(void)
             button_number[0] = copping_button.which_press;
             HexToAscii(button_number, button_number, 1);
             Send1_String(button_number);
-
 #endif
             switch (copping_button.which_press)
             {
@@ -512,7 +506,7 @@ void Timer0_init(void)
 #endif
 }
 
-void Timer2Init(void) //50微秒@11.0592MHz
+void Timer2Init(void) //微秒@11.0592MHz设置由STC ISP下载工具生成定时时间
 {
 #if (Seril_Debug == 0)
     AUXR &= ~0x1c;          ////停止计数, 定时模式, 1T模式
@@ -648,7 +642,6 @@ void PTCOutPut(unsigned char KeyLeve)
     switch (KeyLeve)
     {
     case OFF:
-        // Timer2Off();                                    //关pwm
         set_display->G1display = (set_display->G1display & 0b11111101); //把第1位置零
         set_display->G1display = (set_display->G1display & 0b11111011); //把第2位置零
         set_display->G1display = (set_display->G1display & 0b11110111); //把第3位置零

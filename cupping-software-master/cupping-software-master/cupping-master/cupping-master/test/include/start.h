@@ -18,7 +18,7 @@ typedef unsigned int	u16;
 
 #define MAIN_Fosc 11059200L //晶振频率，每秒
 #define Timer0_Reload (MAIN_Fosc / 100) //Timer 0 中断频率, 100次/秒
-#define Seril_Debug 1
+#define Seril_Debug 0
 #include<string.h>
 #include "stc12.h"
 #include "8051.h"
