@@ -139,13 +139,13 @@ Gn1616_display control_display, *set_display;
 void DeviceInit(void)
 {
 
-    Pump_motor = 0;          //气泵输出初始化
-    Vibration_motor = 0;     //振动马达输出初始化
-    PTC = 0;                 //加热输出初始化
-    Valve = 1;               //电磁阀输出初始化
-    Power_switch = 0;        //电源开关输出初始化
-    PWM_ON = 0;              //按键延时
-    timer_on = 0;            //定时延时
+    Pump_motor = 0;           //气泵输出初始化
+    Vibration_motor = 0;      //振动马达输出初始化
+    PTC = 0;                  //加热输出初始化
+    Valve = 1;                //电磁阀输出初始化
+    Power_switch = 0;         //电源开关输出初始化
+    PWM_ON = 0;               //按键延时
+    timer_on = 0;             //定时延时
     TR0 = 0;                  //停止计数
     ET0 = 0;                  //停止计数中断
     button = &copping_button; //按键指针;
@@ -341,10 +341,10 @@ void KeyTimer(void) __interrupt TIMER0_VECTOR
         {
             copping_button.stat = 0;
             PWM_ON = 0;
-            TR0 = 0; //停止计数
-            ET0 = 0; //停止计数中断
             copping_button.long_press = 0;
             button->button_press_flag = 0;
+            TR0 = 0; //停止计数
+            ET0 = 0; //停止计数中断
         }
 
         if (PWM_ON % 20 == 0)
@@ -361,6 +361,7 @@ void KeyTimer(void) __interrupt TIMER0_VECTOR
                 PWM_ON = 0;
                 TR0 = 0; //停止计数
                 ET0 = 0; //停止计数中断
+                
             }
             if (copping_button.long_press > 5)
             {
@@ -372,6 +373,7 @@ void KeyTimer(void) __interrupt TIMER0_VECTOR
                 PWM_ON = 0;
                 TR0 = 0; //停止计数
                 ET0 = 0; //停止计数中断
+
             }
         }
     }
@@ -391,8 +393,8 @@ void KeyTimer(void) __interrupt TIMER0_VECTOR
     {
         copping_button.stat = 0;
         PWM_ON = 0;
-        TR0 = 0; //停止计数
-        ET0 = 0; //停止计数中断
+        TR0 = 0;                       //停止计数
+        ET0 = 0;                       //停止计数中断
         button->button_press_flag = 0; /* code */
     }
 }
@@ -533,8 +535,8 @@ void TimerOutPut(unsigned char KeyLeve)
 {
     switch (KeyLeve)
     {
-    case OFF:                                                           //关气泵
-        memset(&how_set_timer, 0, sizeof(how_set_timer));               //清零气泵pwm输出
+    case OFF:                                                           //关闭时间
+        memset(&how_set_timer, 0, sizeof(how_set_timer));               //清零定时pwm输出
         set_display->G1display = (set_display->G1display & 0b11101111); //把第4位置零
         set_display->G1display = (set_display->G1display & 0b11011111); //把第5位置零
         set_display->G1display = (set_display->G1display & 0b10111111); //把第6位置零
@@ -548,16 +550,19 @@ void TimerOutPut(unsigned char KeyLeve)
         set_display->G1display |= led7;
         set_timer->timer_pwm_duty = 20; //设置－低－档pwm占空比
         set_timer->timer_flag = 1;
+        Timer0_init(); 
         break;
     case LEVEL_MIDD:
         set_display->G1display |= (led7 + led6);
         set_timer->timer_pwm_duty = 40; //设置－中－档pwm占空比
         set_timer->timer_flag = 1;
+        Timer0_init(); 
         break;
     case LEVEL_HIGH:
         set_display->G1display |= (led5 + led6 + led7);
         set_timer->timer_pwm_duty = 60; //设置－高－档pwm占空比
         set_timer->timer_flag = 1;
+        Timer0_init(); 
         break;
         // -------------------------------
     // Default event handler.
